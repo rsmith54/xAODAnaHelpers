@@ -24,6 +24,8 @@
 #include "TTreeFormula.h"
 #include "TSystem.h"
 
+// General includes
+//#include <sstream>
 
 // this is needed to distribute the algorithm to the workers
 ClassImp(BasicEventSelection)
@@ -254,6 +256,17 @@ EL::StatusCode BasicEventSelection :: fileExecute ()
 
       if ( m_isDerivation ) { Info("fileExecute()","Looking at DAOD made by Derivation Algorithm: %s", m_derivationName.c_str()); }
 
+      // Extract derivation name from current file
+      std::string derivUsed;
+      if (m_isDerivation) {     
+        std::string thisFileName = wk()->inputFileName();
+        std::stringstream ss(thisFileName);
+        std::string fullname;
+        std::getline(ss,fullname,'.');
+        std::stringstream ss_2(fullname);
+        while (std::getline(ss_2,derivUsed,'_')) continue;
+      }
+
       int maxCycle(-1);
       for ( const auto& cbk: *completeCBC ) {
 	  Info ("fileExecute()", "Complete cbk name: %s - stream: %s", (cbk->name()).c_str(), (cbk->inputStream()).c_str() );
@@ -262,7 +275,13 @@ EL::StatusCode BasicEventSelection :: fileExecute ()
 	      maxCycle = cbk->cycle();
 	  }
 	  if ( m_isDerivation ) {
-	      if ( cbk->name() == m_derivationName ) {
+              if (m_derivationName.empty()) {
+                  // Check if the derivation name we found here
+                  // is the same as the one from the filename
+                  if (cbk->name().find(derivUsed) != std::string::npos)
+                      DxAODEventsCBK = cbk; 
+                  
+              } else if ( cbk->name() == m_derivationName ) {
 		  DxAODEventsCBK = cbk;
 	      }
 	  }
